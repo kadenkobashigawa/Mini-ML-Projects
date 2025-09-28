@@ -272,7 +272,7 @@ class Transformer(nn.Module):
         #create X (context) and Y (next token) datasets...
         X, Y = [], []
         for seq_ids in all_ids:
-            # start context with <S> token
+            #start context with <S> token
             context = [self.sp.piece_to_id("<S>")] * self.block_size
             for idx in seq_ids:
                 X.append(context)
