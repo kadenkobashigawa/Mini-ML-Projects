@@ -22,6 +22,8 @@ Play by yourself, with friends, or against AI. This program includes a terminal 
 - Watch the AI learn and adapt over time.
 
 
+
+
 # 2. Beret: The Drawing Robot
 Beret is a software that explores two common architectures: the transformer and diffusion model. Through this creative project, 1) learn how LLMs like GPT comprehend language through self-attention, 2) learn how image generation models carve out subjects from pure noise using a diffusion process, and 3) walk through inverse kinematics in Beret's personalized G-code generation feature.
 
