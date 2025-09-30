@@ -32,12 +32,12 @@ Beret is a software that explores two common architectures: the transformer and 
 - B2: A sample csv dataset to train Beret's transformer. Feel feel to add more data.
 - B3: A diffusion model class built layer by layer using PyTorch.
 - B4: A sample image dataset for label testing.
-- B5: A g-code generator to convert images into joint angle sequences. Build your own two-degree-of-freedom arm to test it out.
+- B5: A g-code generator to convert images into joint angle sequences. Build your own two-degree-of-freedom arm to test it out!
 - Beret: The full pipeline with UI.
-- Other: Expressions for UI, JPGS for the B4, and a test file.
+- Other: Expressions for UI, JPGS for B4, and a testing file.
 
 ## Usage
 - Go through each file in numerical order to gain insight on each of Beret's components.
 - Train both models on the provided data or your own datasets.
-- Run the test file and make some drawings.
+- Run the test file and make some drawings!
 - Note: make sure to create empty folders for the paths at the top of Beret's main program.
