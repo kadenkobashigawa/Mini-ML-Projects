@@ -2,7 +2,7 @@ import random
 import time
 import torch
 import matplotlib.pyplot as plt
-from Blackjack_Model import blackjack_model
+from blackjack_model import blackjack_model
 
 
 
@@ -59,53 +59,53 @@ class blackjack:
             self.running_count -= 1
 
 
-    def deal(self, deck = [], player = [], announce = True):
+    def deal(self, deck = [], player = {}, announce = True):
         
         '''deals a card to a player and updates the player\'s 
         score and history...'''
 
         time.sleep(self.delay)
-        round_statstics = player[-1]
+        round_statstics = player['round statistics']
         card = self.draw(deck)
         if card[1] == 11:
-            round_statstics[1] += 1
+            round_statstics['ace count'] += 1
         if announce:
-            print(f'{player[0]} draws: {card[0]}.')
+            print(f"{player['name']} draws: {card[0]}.")
             self.count_card(card)
         else:
-            print(f'{player[0]} draws: *******.')
-        round_statstics[0][-1] += card[1]
-        round_statstics[2] += [card]
-        player[-1] = round_statstics
+            print(f"{player['name']} draws: *******.")
+        round_statstics['scores'][-1] += card[1]
+        round_statstics['card history'] += [card]
+        player['round statistics'] = round_statstics
     
 
-    def check_for_bust(self, player):
+    def check_for_bust(self, player = {}):
 
         '''if bust, reduces aces or ends round...'''
 
-        round_statstics = player[-1]
-        if round_statstics[0][-1] > 21:
-            if round_statstics[1] == 0:
+        round_statstics = player['round statistics']
+        if round_statstics['scores'][-1] > 21:
+            if round_statstics['ace count'] == 0:
                 time.sleep(self.delay)
-                if player[0] == 'House':
+                if player['name'] == 'House':
                     print(f'Bust! Y\'all got lucky!')
-                    round_statstics[0][-1] = 0
+                    round_statstics['scores'][-1] = 0
                 else:
                     print('Bust! House wins.')
-                    round_statstics[0][-1] = 0
-                    round_statstics[-1] += ['L']
-                player[-1] = round_statstics
+                    round_statstics['scores'][-1] = 0
+                    round_statstics['results'] += ['L']
+                player['round statistics'] = round_statstics
                 return True
             else:
-                round_statstics[1] -= 1
-                round_statstics[0][-1] -= 10
-                player[-1] = round_statstics
+                round_statstics['ace count'] -= 1
+                round_statstics['scores'][-1] -= 10
+                player['round statistics'] = round_statstics
                 return False
         else:
             return False
     
 
-    def h_or_s(self, deck = [], player = []):
+    def h_or_s(self, deck = [], player = {}):
 
         '''hit or stand? the ball is in the player\'s field...'''
         
@@ -115,18 +115,18 @@ class blackjack:
             time.sleep(self.delay)
 
             #check if player has blackjack...
-            round_statstics = player[-1]
-            if round_statstics[0][-1] == 21:
-                print(f'Blackjack! {player[0]} wins.')
+            round_statstics = player['round statistics']
+            if round_statstics['scores'][-1] == 21:
+                print(f"Blackjack! {player['name']} wins.")
                 self.showdown_queue.append(player)
                 break
             
             #if ai is playing...
-            if player[2]:
+            if player['AI']:
 
                 #check if split is a valid move...
-                if len(round_statstics[2]) >= 2:
-                    if round_statstics[2][-1][1] == round_statstics[2][-2][1]:
+                if len(round_statstics['card history']) >= 2:
+                    if round_statstics['card history'][-1][1] == round_statstics['card history'][-2][1]:
                         split = 1
                     else:
                         split = 0
@@ -134,9 +134,9 @@ class blackjack:
                     split = 0
 
                 #then have ai move based on game stats...
-                current_score = round_statstics[0][-1]
-                ace_count = round_statstics[1]
-                value_house_card = self.house[1][2][0][1]
+                current_score = round_statstics['scores'][-1]
+                ace_count = round_statstics['ace count']
+                value_house_card = self.house['round statistics']['card history'][0][1]
                 decks_left = len(self.deck) / 52
                 self.true_count = self.running_count / decks_left
 
@@ -147,7 +147,7 @@ class blackjack:
                                              self.true_count)
                 move = self.ai.hit_or_stand(state)
                 
-                round_statstics[3].append((state, move))
+                round_statstics['trajectory'].append((state, move))
             
             #if person is playing, input function...
             else:
@@ -161,14 +161,14 @@ class blackjack:
             
             #double: deal one more card and double inital bet...
             elif move == 'double':
-                print(f'{player[0]} double downs.')
-                player[-1][-1] += ['D']
+                print(f"{player['name']} double downs.")
+                player['round statistics']['results'] += ['D']
                 self.deal(deck, player, announce = True)
                 if self.check_for_bust(player):
                     break
-                if player[-1][0][-1] == 21:
+                if player['round statistics']['scores'][-1] == 21:
                     time.sleep(self.delay)
-                    print(f'Blackjack! {player[0]} wins.')
+                    print(f"Blackjack! {player['name']} wins.")
                     self.showdown_queue.append(player)
                 else:
                     self.showdown_queue.append(player)
@@ -178,38 +178,38 @@ class blackjack:
             elif move == 'split':
                 
                 #if player has more than one card...
-                if len(round_statstics[2]) >= 2:
+                if len(round_statstics['card history']) >= 2:
 
                     #and the last two cards have the same value...
-                    if round_statstics[2][-1][1] == round_statstics[2][-2][1]:
+                    if round_statstics['card history'][-1][1] == round_statstics['card history'][-2][1]:
 
                         #last card is removed from the round...
                         time.sleep(self.delay)
-                        card = player[-1][2].pop()
+                        card = player['round statistics']['card history'].pop()
                         print(f'Split! The {card[0]} was put to the side.')
-                        player[-1][0][-1] -= card[1]
+                        player['round statistics']['scores'][-1] -= card[1]
                         if card[1] == 11:
-                            player[-1][1] -= 1
+                            player['round statistics']['ace count'] -= 1
                         self.split.append(card)
                     
                     #splitting two unequal cards error...
                     else:
                         time.sleep(self.delay)
                         print('You can\'t split unless your last two cards are the same.')
-                        if player[2]:
+                        if player['AI']:
                             time.sleep(self.delay)
-                            print(f'{player[0]} learned from its moves.')
-                            last_state, last_move = player[-1][3][-1]
+                            print(f"{player['name']} learned from its moves.")
+                            last_state, last_move = player['round statistics']['trajectory'][-1]
                             self.ai.learn(last_state, last_move, 1, 0, self.bet_ratio)
                 
                 #splitting one card error...
                 else:
                     time.sleep(self.delay)
                     print('You need two of the same card to split.')
-                    if player[2]:
+                    if player['AI']:
                         time.sleep(self.delay)
-                        print(f'{player[0]} learned from its moves.')
-                        last_state, last_move = player[-1][3][-1]
+                        print(f"{player['name']} learned from its moves.")
+                        last_state, last_move = player['round statistics']['trajectory'][-1]
                         self.ai.learn(last_state, last_move, 1, 0, self.bet_ratio)
 
             #stand: keep current score and move on to showdown...
@@ -223,18 +223,18 @@ class blackjack:
                 print('Enter "h" for hit or "s" for stand.')
 
 
-    def split_round(self, player = [], split_card = ()):
+    def split_round(self, player = {}, split_card = ()):
             
             '''for double the earnings...'''
 
             #split card is brought back and score is reset...
             time.sleep(self.delay)
             print(f'\nThe {split_card[0]} is back on the table.')
-            player[-1][0].append(split_card[1])
-            player[-1][1] = 0
-            player[-1][2] = [split_card]
+            player['round statistics']['scores'].append(split_card[1])
+            player['round statistics']['ace count'] = 0
+            player['round statistics']['card history'] = [split_card]
             if split_card[1] == 11:
-                player[-1][1] += 1
+                player['round statistics']['ace count'] += 1
             
             #reset split queue and end of game boolean...
             self.split = []
@@ -258,12 +258,12 @@ class blackjack:
         #find highest scorer in queue...
         scores = []
         for player in showdown_queue:
-            scores += player[-1][0]
+            scores += player['round statistics']['scores']
         highest_score = max(scores)
         
         #house reveals its hand...
         time.sleep(self.delay)
-        print(f'\nHouse totals {self.house[1][0][-1]}.')
+        print(f"\nHouse totals {self.house['round statistics']['scores'][-1]}.")
         
         #house hits until it...
         while True:
@@ -273,13 +273,13 @@ class blackjack:
                 break
             
             #hits blackjack...
-            elif self.house[1][0][-1] == 21:
+            elif self.house['round statistics']['scores'][-1] == 21:
                 time.sleep(self.delay)
                 print('Blackjack! House wins.')
                 break
             
             #or reaches 17, 18, 19, or 20...
-            elif self.house[1][0][-1] >= 17 or self.house[1][0][-1] > highest_score:
+            elif self.house['round statistics']['scores'][-1] >= 17 and self.house['round statistics']['ace count'] == 0:
                 break
 
             else:
@@ -289,31 +289,31 @@ class blackjack:
         print('')
         no_dupes = []
         for player in showdown_queue:
-            if player[0] not in no_dupes:
-                for score in player[-1][0]:
+            if player['name'] not in no_dupes:
+                for score in player['round statistics']['scores']:
                     time.sleep(self.delay)
-                    if self.house[1][0][-1] > score:
-                        print(f'House ({self.house[1][0][-1]}) beats {player[0]} ({score}).')
-                        player[-1][-1] += ['L']
-                    elif self.house[1][0][-1] < score:
-                        print(f'{player[0]} ({score}) beats House ({self.house[1][0][-1]}).')
-                        player[-1][-1] += ['W']
+                    if self.house['round statistics']['scores'][-1] > score:
+                        print(f"House ({self.house['round statistics']['scores'][-1]}) beats {player['name']} ({score}).")
+                        player['round statistics']['results'] += ['L']
+                    elif self.house['round statistics']['scores'][-1] < score:
+                        print(f"{player['name']} ({score}) beats House ({self.house['round statistics']['scores'][-1]}).")
+                        player['round statistics']['results'] += ['W']
                     else:
-                        print(f'{player[0]} ({score}) matches House ({self.house[1][0][-1]}).')
-                        player[-1][-1] += ['T']
-                no_dupes.append(player[0])
+                        print(f"{player['name']} ({score}) matches House ({self.house['round statistics']['scores'][-1]}).")
+                        player['round statistics']['results'] += ['T']
+                no_dupes.append(player['name'])
 
 
-    def round(self, players = []):
+    def round(self, players = {}):
 
         '''a single round of blackjack; updates player results & ai trajectory...'''
 
         #reset game stats...
-        self.house = ['House', [[0], 0, []]]
+        self.house = {'name': 'House', 'round statistics': {'scores': [0], 'ace count': 0, 'card history': []}}
         self.split = []
         self.showdown_queue = []
         for player in players:
-            player[-1] = [[0], 0, [], [], []]
+            player['round statistics'] = {'scores': [0], 'ace count': 0, 'card history': [], 'trajectory': [], 'results': []}
 
         #and check deck...
         if len(self.deck) < (5 + 5*len(players)):
@@ -328,12 +328,12 @@ class blackjack:
         self.check_for_bust(self.house)
 
         #if blackjack, game over. house rules...
-        if self.house[1][0][-1] == 21:
+        if self.house['round statistics']['scores'][-1] == 21:
             time.sleep(self.delay * 3)
-            print(f'Unfortunately, the second card was a {self.house[1][2][-1][0]}.')
+            print(f"Unfortunately, the second card was a {self.house['round statistics']['card history'][-1][0]}.")
             time.sleep(self.delay * 3)
             for player in players:
-                player[-1][-1] += ['L']
+                player['round statistics']['results'] += ['L']
             return
         
         #deal two cards to each player...
@@ -394,18 +394,13 @@ class blackjack:
             print(f'{final_player_name} was given ${bank_balance:.2f} to play.')
             ai_boolean = True if final_player_name[:2].lower() == 'ai' else False
 
-            #players:  [name, 
-            #           bank balance, 
-            #           AI?,
-            #           bank record, 
-            #           game record [W, L], 
-            #           round statistics [scores, ace count, card history, trajectory, results]]
-            self.players.append([final_player_name, 
-                                 bank_balance, 
-                                 ai_boolean, 
-                                 [bank_balance], 
-                                 [0, 0], 
-                                 [[0], 0, [], [], []]])
+            #build player list...
+            self.players.append({'name': final_player_name, 
+                                 'bank balance': bank_balance, 
+                                 'AI': ai_boolean, 
+                                 'bank record': [bank_balance], 
+                                 'game record': [0, 0], 
+                                 'round statistics': {'scores': [0], 'ace count': 0, 'card history': [], 'trajectory': [], 'results': []}})
             
             #if ai is playing, initialize model and try to load weights...
             if ai_boolean:
@@ -444,14 +439,14 @@ class blackjack:
                     
                     #get bets from...
                     time.sleep(self.delay)
-                    print(f'\n{player[0]} has ${player[1]:.2f}.')
+                    print(f"\n{player['name']} has ${player['bank balance']:.2f}.")
 
                     #ai players...
-                    if player[2]:
+                    if player['AI']:
                         time.sleep(self.delay)
-                        bet = round(player[1] * self.bet_ratio, 2)
+                        bet = round(player['bank balance'] * self.bet_ratio, 2)
                         bet = bet if bet >= self.min_bet else self.min_bet
-                        print(f'{player[0]} bet ${bet:.2f}.')
+                        print(f"{player['name']} bet ${bet:.2f}.")
                         self.bets.append(bet)
 
                     #or real players...
@@ -459,16 +454,16 @@ class blackjack:
                         while True:
                             bet_input = input(f'Enter a bet: ')
                             if bet_input.lower() == 'q':
-                                print(f'{player[0]} cashed out at ${player[1]:.2f}.')
+                                print(f"{player['name']} cashed out at ${player['bank balance']:.2f}.")
                                 self.players.remove(player)
                                 self.losers.append(player)
                                 break
                             try:
                                 bet = round(float(bet_input), 2)
-                                if bet < 0.01 or bet > player[1]:
+                                if bet < 0.01 or bet > player['bank balance']:
                                     print("Invalid bet amount. Must be > 0 and ≤ your balance.")
                                     continue
-                                print(f'{player[0]} bet ${bet:.2f}.')
+                                print(f"{player['name']} bet ${bet:.2f}.")
                                 self.bets.append(bet)
                                 break
                             except ValueError:
@@ -486,48 +481,48 @@ class blackjack:
                 for i in range(len(self.players)):
                     time.sleep(self.delay)
                     ds = 0
-                    player_i_balance = self.players[i][1]
-                    for result in self.players[i][-1][-1]:
+                    player_i_balance = self.players[i]['bank balance']
+                    for result in self.players[i]['round statistics']['results']:
                         if result == 'D':
                             ds += 1
                         elif result == 'W':
                             mult = 2 if ds > 0 else 1
-                            self.players[i][1] += self.bets[i] * mult
-                            print(f'{self.players[i][0]} recieves ${self.bets[i] * mult:.2f}.')
+                            self.players[i]['bank balance'] += self.bets[i] * mult
+                            print(f"{self.players[i]['name']} recieves ${self.bets[i] * mult:.2f}.")
                             ds -= 1
                         elif result == 'L':
                             mult = 2 if ds > 0 else 1
-                            self.players[i][1] -= self.bets[i] * mult
-                            print(f'${self.bets[i] * mult:.2f} is collected from {self.players[i][0]}.')
+                            self.players[i]['bank balance'] -= self.bets[i] * mult
+                            print(f"${self.bets[i] * mult:.2f} is collected from {self.players[i]['name']}.")
                             ds -= 1
                         elif result == 'T':
                             mult = 2 if ds > 0 else 1
-                            print(f'Push! {self.players[i][0]} keeps ${self.bets[i] * mult:.2f}.')
+                            print(f"Push! {self.players[i]['name']} keeps ${self.bets[i] * mult:.2f}.")
                             ds -= 1
                     
                     #ai learns from its first move...
-                    if self.players[i][2]:
-                        if len(self.players[i][-1][3]) > 0:
-                            first_state, first_move = self.players[i][-1][3][0]
+                    if self.players[i]['AI']:
+                        if len(self.players[i]['round statistics']['trajectory']) > 0:
+                            first_state, first_move = self.players[i]['round statistics']['trajectory'][0]
                             self.ai.learn(first_state, 
                                           first_move, 
                                           player_i_balance, 
-                                          self.players[i][1], 
+                                          self.players[i]['bank balance'], 
                                           self.bet_ratio)
 
                     #record statistics:
-                    self.players[i][3].append(self.players[i][1])
-                    if player_i_balance > self.players[i][1]:
-                        self.players[i][4][1] += 1
+                    self.players[i]['bank record'].append(self.players[i]['bank balance'])
+                    if player_i_balance > self.players[i]['bank balance']:
+                        self.players[i]['game record'][1] += 1
                     else:
-                        self.players[i][4][0] += 1
+                        self.players[i]['game record'][0] += 1
                         
                 #update round number and loop to steal more money...
                 self.round_n += 1
                 for player in self.players[:]:
-                    if player[1] <= self.min_bet:
+                    if player['bank balance'] <= self.min_bet:
                         time.sleep(self.delay)
-                        print(f'{player[0]} was forced off the table.')
+                        print(f"{player['name']} was forced off the table.")
                         self.players.remove(player)
                         self.losers.append(player)
                 time.sleep(self.delay)
@@ -538,15 +533,16 @@ class blackjack:
             print(top_border)
             l_names = []
             for player in self.losers:
-                l_names.append(player[0])
+                l_names.append(player['name'])
             pad = max(len(name) for name in l_names) + 2
             for player in self.losers:
-                print(f'{player[0]:<{pad}} W: {player[4][0]:>3}   L: {player[4][1]:>3}   ', end = '')
-                print(f'{player[4][0]/((player[4][1]+player[4][0] + 1e-10)) * 100:.2f}%')
+                print(f"{player['name']:<{pad}} W: {player['game record'][0]:>3}   L: {player['game record'][1]:>3}   ", end = "")
+                win_rate = player['game record'][0] / ((player['game record'][1] + player['game record'][0] + 1e-10)) * 100
+                print(f'{win_rate:.2f}%')
                 print(f'{"-"*49}')
-                plt.plot(player[3], 
+                plt.plot(player['bank record'], 
                          linestyle = '-', 
-                         label = f'{player[0]:<{pad}}: {player[4][0]/((player[4][1]+player[4][0] + 1e-10)) * 100:.2f}%')
+                         label = f"{player['name']:<{pad}}: {win_rate:.2f}%")
             print(bottom_border)
             
             plt.title(f'Blackjack Game Statistics')
@@ -562,9 +558,9 @@ class blackjack:
                 break
             else:
                 for player in self.losers[:]:
-                    player[1] = bank_balance
-                    player[3] = [bank_balance]
-                    player[4] = [0, 0]
+                    player['bank balance'] = bank_balance
+                    player['bank record'] = [bank_balance]
+                    player['game record'] = [0, 0]
                     self.players.append(player)
                     self.losers.remove(player)               
         print(f'\n\n\n\n')
