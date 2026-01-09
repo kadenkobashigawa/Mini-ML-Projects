@@ -1,5 +1,5 @@
 # Mini-Projects
-Here are some fun and creative projects to explore state of the art ML architectures and applications.
+Here are some fun and creative projects to run on your terminal.
 
 
 # 1. Blackjack
