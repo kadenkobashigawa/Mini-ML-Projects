@@ -2,7 +2,6 @@
 import customtkinter as ctk
 import os
 import time
-import csv
 from PIL import Image
 from B1_Transformer import Transformer
 from B3_Diffusion_Model import DiffusionModel
@@ -17,7 +16,7 @@ class Beret:
     def __init__(self):
 
         '''beret's customtkinter user interface includes a transformer-powered chat bot, 
-        a diffusion model for image generation, and g-coder to convert generated images into
+        a diffusion model for image generation, and a g-coder to convert generated images into
         directions for beret's robotic arm...'''
 
         #collect some paths...
@@ -46,7 +45,7 @@ class Beret:
     
     def beret(self):
 
-        '''main chatbot loop with functions: respond, draw, learn, and sleep...'''
+        '''main chatbot loop with functions: respond & draw...'''
         
         #get a string from the chatbox ui and save it as a variable and within short term memory...
         chat = self.chatbox.get()
@@ -114,7 +113,7 @@ class Beret:
         '''trim long strings to fit nicely in "brain activities" ui...'''
 
         lines = text.split("\n")
-        trimmed_lines = lines[:max_lines]
+        trimmed_lines = [line.rstrip() for line in lines[:max_lines]]
         return "\n".join(trimmed_lines) + ("..." if len(lines) > max_lines else "")
 
 
