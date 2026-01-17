@@ -8,6 +8,7 @@ from torch.nn import functional as F
 from torchvision import transforms
 from torch.utils.data import DataLoader, TensorDataset
 from PIL import Image
+from tqdm import tqdm
 
 
 
@@ -398,40 +399,31 @@ class DiffusionModel(nn.Module):
         loss_list = []
         for epoch in range(epochs):
             ell = []
-            for batch, label in train_loader:
+            with tqdm(train_loader, total = len(train_loader), desc = f'Epoch {epoch + 1}', unit = 'steps') as pbar:
+                for batch, label in pbar:
 
-                #create a tensor of random time indices...
-                t = torch.randint(0, self.timesteps, (batch.shape[0],)).long().to(device)
+                    #create a tensor of random time indices...
+                    t = torch.randint(0, self.timesteps, (batch.shape[0],)).long().to(device)
 
-                #forward pass to define noisy images and corresponding ground truth noise...
-                batch_noisy, noise = self.forward(batch, t, device = device)
+                    #forward pass to define noisy images and corresponding ground truth noise...
+                    batch_noisy, noise = self.forward(batch, t, device = device)
 
-                #feed noisy images into unet to get predicted noise...
-                predicted_noise = self.unet(batch_noisy, t, label)
+                    #feed noisy images into unet to get predicted noise...
+                    predicted_noise = self.unet(batch_noisy, t, label)
 
-                #evaluate loss...
-                loss = torch.nn.functional.mse_loss(noise, predicted_noise)
+                    #evaluate loss...
+                    loss = torch.nn.functional.mse_loss(noise, predicted_noise)
 
-                #update parameters...
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                ell.append(loss.item())
+                    #update parameters...
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+                    ell.append(loss.item())
+                    if checkpoint_path:
+                        torch.save(self.state_dict(), os.path.join(checkpoint_path, "unet_weights.pth"))
 
             #update loss with mean epoch loss...
             loss_list.append(np.mean(ell))
-
-            #display training progress...
-            if epoch % loss_update == 0:
-                max_bar = 50
-                ratio = epoch / epochs
-                print(f"Training... |{'█' * (round(max_bar * ratio)) + '▒' * (max_bar - round(max_bar * ratio))}| Epoch: {epoch:>4.0f}/{epochs} | Loss: {np.mean(ell):.5f} |")
-                if checkpoint_path:
-                    torch.save(self.state_dict(), os.path.join(checkpoint_path, "unet_weights.pth"))
-
-        #report final loss...
-        self.final_loss = np.mean(loss_list)
-        print(f"Complete!   |{'█' * max_bar}| Epoch: {epochs:>4.0f}/{epochs} | Loss: {self.final_loss:.5f} |")
 
 
     def generate_image(self, label, save_folder, show_graph = False, device = 'cpu'):
@@ -453,16 +445,12 @@ class DiffusionModel(nn.Module):
             img = torch.randn((1, 3) + img_shape).to(device)
 
             #starting from the last step in timesteps...
-            for i in reversed(range(self.timesteps)):
+            for i in tqdm(reversed(range(self.timesteps)), total = self.timesteps, desc = 'Denoising Image', unit = 'steps'):
 
                 #throw the timestep & label and the noisy image into the diffusion model to get the denoised image...
                 t = torch.full((1,), i, dtype = torch.long, device = device)
                 img = self.backward(img, t, l)
-                if i % 10 == 0:
-                    max_bar = 50
-                    ratio = (self.timesteps - i) / self.timesteps
-                    print(f"Denoising Image... |{'█' * (round(max_bar * ratio)) + '▒' * (max_bar - round(max_bar * ratio))}| Timestep: {(self.timesteps - i):>4.0f}/{self.timesteps} |")
-
+                
                 #show what the image looks like at the certain timestep...
                 if i in shown_timesteps:
                     idx = shown_timesteps.index(i)
