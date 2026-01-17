@@ -7,6 +7,7 @@ import time
 import matplotlib.pyplot as plt
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset, random_split
+from tqdm import tqdm
 
 
 
@@ -272,7 +273,7 @@ class Transformer(nn.Module):
         #create X (context) and Y (next token) datasets...
         X, Y = [], []
         for seq_ids in all_ids:
-            #start context with <S> token
+            # start context with <S> token
             context = [self.sp.piece_to_id("<S>")] * self.block_size
             for idx in seq_ids:
                 X.append(context)
@@ -283,8 +284,7 @@ class Transformer(nn.Module):
 
 
     def train_model(self, checkpoint_path = '', epochs = 300, batch_size = 8, patience = 15,
-                    val_split = 0.2, learning_rate = 0.0001, progress_interval = 5, 
-                    subset_size = 150000, show_graph = False):
+                    val_split = 0.2, learning_rate = 0.0001, subset_size = 150_000, show_graph = False):
         
         '''includes per parameter adaptation, global learning 
         rate refinement, and an auto stop function...'''
@@ -330,25 +330,27 @@ class Transformer(nn.Module):
             #for training updates...
             tr_loss, tr_steps = 0.0, 0
             va_loss, va_steps = 0.0, 0
-            last_print_time = time.time()
 
             #train model on the training data...
-            for Xb, Yb in tr_loader:
+            with tqdm(tr_loader, total = len(tr_loader), desc = f'Epoch {epoch + 1}', 
+                      unit = 'steps', colour = 'green') as pbar:
+                for Xb, Yb in pbar:
 
-                #evaluate loss...
-                logits, loss = self.forward(Xb, Yb)
-                tr_loss += loss.item()
-                tr_steps += 1
-                
-                #update parameters...
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                    #evaluate loss...
+                    logits, loss = self.forward(Xb, Yb)
+                    tr_loss += loss.item()
+                    tr_steps += 1
 
-                #show progress...
-                if time.time() - last_print_time > progress_interval:
-                    print(f'Epoch {epoch + 1:>3} | Step {tr_steps:>6}/{len(tr_loader)} | TR Loss: {tr_loss / tr_steps:.5f} | LR: {optimizer.param_groups[0]["lr"]:.6f}')
-                    last_print_time = time.time()
+                    #update parameters...
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+
+                    #update progress bar
+                    pbar.set_postfix({
+                        'TR_Loss': f'{tr_loss / tr_steps:.5f}',
+                        'LR': f"{optimizer.param_groups[0]['lr']:.6f}"
+                    })
             
             #record epoch training loss...
             tr_loss /= tr_steps
@@ -357,17 +359,19 @@ class Transformer(nn.Module):
             #get validation loss...
             self.eval()
             with torch.no_grad():
-                for Xb, Yb in va_loader:
+                with tqdm(va_loader, total = len(va_loader), desc = f'Epoch {epoch + 1}', 
+                          unit = 'steps', colour = 'green') as pbar:
+                    for Xb, Yb in pbar:
 
-                    #evaluate loss...
-                    logits, loss = self.forward(Xb, Yb)
-                    va_loss += loss.item()
-                    va_steps += 1
+                        #evaluate loss...
+                        logits, loss = self.forward(Xb, Yb)
+                        va_loss += loss.item()
+                        va_steps += 1
 
-                    #show progress...
-                    if time.time() - last_print_time > progress_interval:
-                        print(f'Epoch {epoch + 1:>3} | Step {va_steps:>6}/{len(va_loader)} | VAL Loss: {va_loss / va_steps:.5f} | LR: {optimizer.param_groups[0]["lr"]:.6f}')
-                        last_print_time = time.time()
+                        #update progress bar
+                        pbar.set_postfix({
+                            'VAL_Loss': f'{va_loss / va_steps:.5f}'
+                        })
             
             #record epoch val loss...
             va_loss /= va_steps
@@ -380,11 +384,11 @@ class Transformer(nn.Module):
                 no_impr = 0
                 if checkpoint_path:
                     torch.save(self.state_dict(), 
-                               os.path.join(checkpoint_path, "transformer_weights.pth"))
+                               os.path.join(checkpoint_path, 'transformer_weights.pth'))
             else:
                 no_impr += 1
                 if no_impr >= patience:
-                    print("Training Complete.")
+                    print('Training Complete.')
                     break
 
         #plot training loss and validation loss to visualize overfitting...
@@ -431,8 +435,8 @@ class Transformer(nn.Module):
                 chat_tensor = torch.tensor(chat_ids, dtype = torch.long).reshape(1, -1)
 
                 #update process log: show accumulated response so far...
-                response_so_far = self.sp.decode(pred_ids)
-                process += f'\nStep {step+1}: {response_so_far}'
+                response_so_far = self.sp.decode(pred_ids).replace(' ', '・')
+                process += f'\nStep {step + 1}: {response_so_far}'
 
                 #stop at end token...
                 if next_piece == '<E>':
